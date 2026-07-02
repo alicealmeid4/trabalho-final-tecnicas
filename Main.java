@@ -11,89 +11,108 @@ public class Main {
 
     public static void main(String[] args) {
 
-		// maquina que incrementa um numero binario em 1
+		inicializarTransicoes();
+		finais.add("qf");
+
+		String entrada = lerEntrada(args);
+		inicializarFita(entrada);
+
+		System.out.println("Fita inicial:");
+		imprimeFita();
+
+		boolean rodando = true;
+		while (rodando) {
+			contadorPassos++;
+			if (contadorPassos > 1000) {
+				System.out.println("deu ruim, muitas iteracoes");
+				break;
+			}
+
+			char simboloLido = fita[posicao];
+			String[] transicaoEncontrada = buscarTransicao(estadoAtual, simboloLido);
+
+			if (transicaoEncontrada == null) {
+				System.out.println("nao ha transicao para estado " + estadoAtual + " e simbolo " + simboloLido);
+				rodando = false;
+			} else {
+				rodando = executarPasso(transicaoEncontrada);
+				System.out.println("passo " + contadorPassos + " -> estado=" + estadoAtual + " pos=" + posicao);
+				imprimeFita();
+			}
+		}
+
+		verificarAceitacao();
+    }
+
+	public static void inicializarTransicoes() {
 		transicoes.add(new String[]{"q0","0","q0","0","D"});
 		transicoes.add(new String[]{"q0","1","q0","1","D"});
 		transicoes.add(new String[]{"q0","_","q1","_","E"});
 		transicoes.add(new String[]{"q1","1","q1","0","E"});
 		transicoes.add(new String[]{"q1","0","qf","1","P"});
 		transicoes.add(new String[]{"q1","_","qf","1","P"});
+	}
 
-		finais.add("qf");
-
+	public static String lerEntrada(String[] args) {
 		String entrada = "1011";
-		if(args.length>0){
-			entrada=args[0];
+		if (args.length > 0) {
+			entrada = args[0];
 		}
+		return entrada;
+	}
 
+	public static void inicializarFita(String entrada) {
 		fita = new char[100];
-		for(int i=0;i<fita.length;i++){
-			fita[i]='_';
+		for (int i = 0; i < fita.length; i++) {
+			fita[i] = '_';
 		}
-		for(int i=0;i<entrada.length();i++){
-			fita[i+40]=entrada.charAt(i);
+		for (int i = 0; i < entrada.length(); i++) {
+			fita[i + 40] = entrada.charAt(i);
 		}
+		posicao = 40;
+		estadoAtual = "q0";
+	}
 
-		posicao=40;
-		estadoAtual="q0";
-
-		System.out.println("Fita inicial:");
-		imprimeFita();
-
-		boolean rodando=true;
-		while(rodando){
-			contadorPassos++;
-			if(contadorPassos>1000){
-				System.out.println("deu ruim, muitas iteracoes");
-				break;
-			}
-
-			char simboloLido = fita[posicao];
-			String[] transicaoEncontrada = null;
-			for(int i=0;i<transicoes.size();i++){
-				String[] regra = transicoes.get(i);
-				if(regra[0].equals(estadoAtual) && regra[1].charAt(0)==simboloLido){
-					transicaoEncontrada=regra;
-					break;
-				}
-			}
-
-			if(transicaoEncontrada==null){
-				System.out.println("nao ha transicao para estado "+estadoAtual+" e simbolo "+simboloLido);
-				rodando=false;
-			}else{
-
-				fita[posicao]=transicaoEncontrada[3].charAt(0);
-				estadoAtual=transicaoEncontrada[2];
-
-				if(transicaoEncontrada[4].equals("D")){
-					posicao=posicao+1;
-				}
-				if(transicaoEncontrada[4].equals("E")){
-					posicao=posicao-1;
-				}
-				if(transicaoEncontrada[4].equals("P")){
-					rodando=false;
-				}
-
-				System.out.println("passo "+contadorPassos+" -> estado="+estadoAtual+" pos="+posicao);
-				imprimeFita();
+	public static String[] buscarTransicao(String estado, char simbolo) {
+		for (int i = 0; i < transicoes.size(); i++) {
+			String[] regra = transicoes.get(i);
+			if (regra[0].equals(estado) && regra[1].charAt(0) == simbolo) {
+				return regra;
 			}
 		}
+		return null;
+	}
 
-		if(finais.contains(estadoAtual)){
+	public static boolean executarPasso(String[] regra) {
+		fita[posicao] = regra[3].charAt(0);
+		estadoAtual = regra[2];
+
+		if (regra[4].equals("D")) {
+			posicao = posicao + 1;
+		}
+		if (regra[4].equals("E")) {
+			posicao = posicao - 1;
+		}
+		if (regra[4].equals("P")) {
+			return false;
+		}
+		return true;
+	}
+
+	public static void verificarAceitacao() {
+		if (finais.contains(estadoAtual)) {
 			System.out.println("ACEITA");
-		}else{
+		} else {
 			System.out.println("REJEITA (ou parou sem chegar em estado final)");
 		}
 
 		System.out.println("resultado final:");
-		String resultado="";
-		for(int i=0;i<fita.length;i++){
-			if(fita[i]!='_')resultado=resultado+fita[i];
+		String resultado = "";
+		for (int i = 0; i < fita.length; i++) {
+			if (fita[i] != '_') resultado = resultado + fita[i];
 		}
 		System.out.println(resultado);
-    }
+	}
 
 	public static void imprimeFita(){
 		String s = "";
