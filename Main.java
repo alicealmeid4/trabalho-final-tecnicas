@@ -1,121 +1,173 @@
 import java.util.*;
 
+/**
+ * Representa um estado da Maquina de Turing.
+ * Cada estado sabe processar seu proprio simbolo lido e decidir a transicao (padrao State).
+ */
+interface EstadoMaquina {
+	ResultadoTransicao processar(char simboloLido);
+	boolean isFinal();
+	String getNome();
+}
+
+/** Encapsula o resultado de uma transicao: o que escrever, para onde ir e a direcao do movimento. */
+class ResultadoTransicao {
+	char simboloParaEscrever;
+	EstadoMaquina proximoEstado;
+	char direcao; // 'D' = direita, 'E' = esquerda, 'P' = parar
+
+	public ResultadoTransicao(char simboloParaEscrever, EstadoMaquina proximoEstado, char direcao) {
+		this.simboloParaEscrever = simboloParaEscrever;
+		this.proximoEstado = proximoEstado;
+		this.direcao = direcao;
+	}
+}
+
+/** Estado inicial: percorre a fita para a direita ate encontrar o fim do numero binario. */
+class EstadoQ0 implements EstadoMaquina {
+	private EstadoMaquina estadoQ1;
+
+	public EstadoQ0(EstadoMaquina estadoQ1) {
+		this.estadoQ1 = estadoQ1;
+	}
+
+	public ResultadoTransicao processar(char simboloLido) {
+		if (simboloLido == '0') return new ResultadoTransicao('0', this, 'D');
+		if (simboloLido == '1') return new ResultadoTransicao('1', this, 'D');
+		if (simboloLido == '_') return new ResultadoTransicao('_', estadoQ1, 'E');
+		return null;
+	}
+
+	public boolean isFinal() { return false; }
+	public String getNome() { return "q0"; }
+}
+
+/** Estado de incremento: percorre a fita para a esquerda somando 1 em binario, com vai-um. */
+class EstadoQ1 implements EstadoMaquina {
+	private EstadoMaquina estadoFinal;
+
+	public EstadoQ1(EstadoMaquina estadoFinal) {
+		this.estadoFinal = estadoFinal;
+	}
+
+	public ResultadoTransicao processar(char simboloLido) {
+		if (simboloLido == '1') return new ResultadoTransicao('0', this, 'E');
+		if (simboloLido == '0') return new ResultadoTransicao('1', estadoFinal, 'P');
+		if (simboloLido == '_') return new ResultadoTransicao('1', estadoFinal, 'P');
+		return null;
+	}
+
+	public boolean isFinal() { return false; }
+	public String getNome() { return "q1"; }
+}
+
+/** Estado final de aceitacao: a maquina para ao chegar aqui. */
+class EstadoFinal implements EstadoMaquina {
+	public ResultadoTransicao processar(char simboloLido) {
+		return null; // nunca deveria ser chamado: a maquina para (direcao 'P') antes de chegar aqui
+	}
+
+	public boolean isFinal() { return true; }
+	public String getNome() { return "qf"; }
+}
+
 public class Main {
 
-	static char[] f; // fita
-	static int p; // posicao
-	static String est; //estado atual
-	static List<String[]> t = new ArrayList<String[]>();
-	static Set<String> finais = new HashSet<String>();
-	static int cont = 0;
+	static char[] fita;
+	static int posicao;
+	static EstadoMaquina estadoAtual;
+	static int contadorPassos = 0;
 
-    public static void main(String[] args) {
+	public static void main(String[] args) {
 
-		// maquina que incrementa um numero binario em 1
-		t.add(new String[]{"q0","0","q0","0","D"});
-		t.add(new String[]{"q0","1","q0","1","D"});
-		t.add(new String[]{"q0","_","q1","_","E"});
-		t.add(new String[]{"q1","1","q1","0","E"});
-		t.add(new String[]{"q1","0","qf","1","P"});
-		t.add(new String[]{"q1","_","qf","1","P"});
+		estadoAtual = construirEstados();
 
-		finais.add("qf");
-
-		String entrada = "1011";
-		if(args.length>0){
-			entrada=args[0];
-		}
-
-		f = new char[100];
-		for(int i=0;i<f.length;i++){
-			f[i]='_';
-		}
-		for(int i=0;i<entrada.length();i++){
-			f[i+40]=entrada.charAt(i);
-		}
-
-		p=40;
-		est="q0";
+		String entrada = lerEntrada(args);
+		inicializarFita(entrada);
 
 		System.out.println("Fita inicial:");
 		imprimeFita();
 
-		boolean rodando=true;
-		while(rodando){
-			cont++;
-			if(cont>1000){
+		boolean rodando = true;
+		while (rodando) {
+			contadorPassos++;
+			if (contadorPassos > 1000) {
 				System.out.println("deu ruim, muitas iteracoes");
 				break;
 			}
 
-			char simb = f[p];
-			String[] trans = null;
-			for(int i=0;i<t.size();i++){
-				String[] linha = t.get(i);
-				if(linha[0].equals(est) && linha[1].charAt(0)==simb){
-					trans=linha;
-					break;
-				}
-			}
+			char simboloLido = fita[posicao];
+			ResultadoTransicao resultado = estadoAtual.processar(simboloLido);
 
-			if(trans==null){
-				System.out.println("nao ha transicao para estado "+est+" e simbolo "+simb);
-				rodando=false;
-			}else{
+			if (resultado == null) {
+				System.out.println("nao ha transicao para estado " + estadoAtual.getNome() + " e simbolo " + simboloLido);
+				rodando = false;
+			} else {
+				fita[posicao] = resultado.simboloParaEscrever;
+				estadoAtual = resultado.proximoEstado;
 
-				f[p]=trans[3].charAt(0);
-				est=trans[2];
+				if (resultado.direcao == 'D') posicao++;
+				if (resultado.direcao == 'E') posicao--;
+				if (resultado.direcao == 'P') rodando = false;
 
-				if(trans[4].equals("D")){
-					p=p+1;
-				}
-				if(trans[4].equals("E")){
-					p=p-1;
-				}
-				if(trans[4].equals("P")){
-					rodando=false;
-				}
-
-				System.out.println("passo "+cont+" -> estado="+est+" pos="+p);
+				System.out.println("passo " + contadorPassos + " -> estado=" + estadoAtual.getNome() + " pos=" + posicao);
 				imprimeFita();
 			}
 		}
 
-		if(finais.contains(est)){
+		verificarAceitacao();
+	}
+
+	/** Monta o grafo de estados da maquina (substitui a antiga lista de transicoes em String[]). */
+	public static EstadoMaquina construirEstados() {
+		EstadoMaquina qf = new EstadoFinal();
+		EstadoMaquina q1 = new EstadoQ1(qf);
+		EstadoMaquina q0 = new EstadoQ0(q1);
+		return q0;
+	}
+
+	public static String lerEntrada(String[] args) {
+		String entrada = "1011";
+		if (args.length > 0) {
+			entrada = args[0];
+		}
+		return entrada;
+	}
+
+	public static void inicializarFita(String entrada) {
+		fita = new char[100];
+		for (int i = 0; i < fita.length; i++) {
+			fita[i] = '_';
+		}
+		for (int i = 0; i < entrada.length(); i++) {
+			fita[i + 40] = entrada.charAt(i);
+		}
+		posicao = 40;
+	}
+
+	public static void verificarAceitacao() {
+		if (estadoAtual.isFinal()) {
 			System.out.println("ACEITA");
-		}else{
+		} else {
 			System.out.println("REJEITA (ou parou sem chegar em estado final)");
 		}
 
 		System.out.println("resultado final:");
-		String res="";
-		for(int i=0;i<f.length;i++){
-			if(f[i]!='_')res=res+f[i];
+		String resultado = "";
+		for (int i = 0; i < fita.length; i++) {
+			if (fita[i] != '_') resultado = resultado + fita[i];
 		}
-		System.out.println(res);
-    }
-
-	public static void imprimeFita(){
-		String s = "";
-		for (int i = 30; i < 55; i++) {
-			s += f[i];
-		}
-		System.out.println(s);
-		String marcador="";
-		for(int i=30;i<55;i++){
-			if(i==p) marcador+="^"; else marcador+=" ";
-		}
-		System.out.println(marcador);
+		System.out.println(resultado);
 	}
 
-	// funcao que verifica se string so tem 0 e 1, feita rapido e nunca usada direito
-	public static boolean verificaBinario(String x){
-		for(int i=0;i<x.length();i++){
-			char c = x.charAt(i);
-			if(c!='0' && c!='1'){
-				return false;
-			}
+	public static void imprimeFita() {
+		String trechoFita = "";
+		String marcador = "";
+		for (int i = 30; i < 55; i++) {
+			trechoFita += fita[i];
+			marcador += (i == posicao) ? "^" : " ";
 		}
-		return true;
+		System.out.println(trechoFita);
+		System.out.println(marcador);
 	}
 }
