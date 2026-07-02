@@ -107,15 +107,4 @@ public class Main {
 		}
 		System.out.println(marcador);
 	}
-
-	// funcao que verifica se string so tem 0 e 1, feita rapido e nunca usada direito
-	public static boolean verificaBinario(String x){
-		for(int i=0;i<x.length();i++){
-			char c = x.charAt(i);
-			if(c!='0' && c!='1'){
-				return false;
-			}
-		}
-		return true;
-	}
 }
