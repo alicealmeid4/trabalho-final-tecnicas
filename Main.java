@@ -114,16 +114,14 @@ public class Main {
 		System.out.println(resultado);
 	}
 
-	public static void imprimeFita(){
-		String s = "";
+	public static void imprimeFita() {
+		String trechoFita = "";
+		String marcador = "";
 		for (int i = 30; i < 55; i++) {
-			s += fita[i];
+			trechoFita += fita[i];
+			marcador += (i == posicao) ? "^" : " ";
 		}
-		System.out.println(s);
-		String marcador="";
-		for(int i=30;i<55;i++){
-			if(i==posicao) marcador+="^"; else marcador+=" ";
-		}
+		System.out.println(trechoFita);
 		System.out.println(marcador);
 	}
 }
